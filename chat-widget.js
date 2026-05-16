@@ -12,29 +12,43 @@
     .ai-fab {
       position: fixed;
       right: max(16px, env(safe-area-inset-right));
-      bottom: max(18px, calc(env(safe-area-inset-bottom) + 14px));
+      bottom: max(24px, calc(env(safe-area-inset-bottom) + 20px));
       z-index: 2147483646;
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      padding: 0.75rem 1.1rem;
-      background: #1a1f2e; color: #fffaf0;
-      border: 1px solid #7a1a1a;
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      padding: 0.8rem 1.2rem;
+      background: #7a1a1a; color: #fffaf0;
+      border: 2px solid #fffaf0;
       border-radius: 999px;
       font-family: "IBM Plex Sans", system-ui, sans-serif;
-      font-weight: 600; font-size: 0.95rem;
+      font-weight: 700; font-size: 0.95rem;
       letter-spacing: 0.02em;
       cursor: pointer; user-select: none;
-      box-shadow: 0 6px 20px rgba(26,31,46,0.32), 0 2px 4px rgba(26,31,46,0.22);
-      transition: transform 0.15s ease, background 0.2s ease;
+      box-shadow:
+        0 0 0 3px rgba(122,26,26,0.18),
+        0 8px 24px rgba(26,31,46,0.38),
+        0 2px 6px rgba(26,31,46,0.28);
+      transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
       -webkit-tap-highlight-color: transparent;
       transform: translateZ(0);
       will-change: transform;
+      animation: ai-fab-pulse 2.4s ease-in-out infinite;
     }
-    .ai-fab:hover { transform: translateY(-2px); background: #7a1a1a; }
+    .ai-fab:hover, .ai-fab:focus-visible {
+      transform: translateY(-2px); background: #1a1f2e;
+      box-shadow: 0 0 0 4px rgba(26,31,46,0.18), 0 10px 28px rgba(26,31,46,0.42);
+      animation: none;
+    }
+    .ai-fab:active { transform: translateY(0); }
+    @keyframes ai-fab-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(122,26,26,0.55), 0 8px 24px rgba(26,31,46,0.38), 0 2px 6px rgba(26,31,46,0.28); }
+      50%      { box-shadow: 0 0 0 10px rgba(122,26,26,0), 0 8px 24px rgba(26,31,46,0.38), 0 2px 6px rgba(26,31,46,0.28); }
+    }
+    @media (prefers-reduced-motion: reduce) { .ai-fab { animation: none; } }
     .ai-fab .ai-fab-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: #1a5a3a; box-shadow: 0 0 0 3px rgba(26,90,58,0.28);
+      width: 9px; height: 9px; border-radius: 50%;
+      background: #b8e6c5; box-shadow: 0 0 0 3px rgba(184,230,197,0.35);
     }
-    .ai-fab svg { width: 16px; height: 16px; }
+    .ai-fab svg { width: 17px; height: 17px; }
 
     .ai-overlay {
       position: fixed; inset: 0; z-index: 9999;
@@ -253,9 +267,9 @@
 
     @media (max-width: 480px) {
       .ai-fab {
-        right: max(12px, env(safe-area-inset-right));
-        bottom: max(16px, calc(env(safe-area-inset-bottom) + 12px));
-        font-size: 0.9rem; padding: 0.65rem 1rem;
+        right: max(14px, env(safe-area-inset-right));
+        bottom: max(28px, calc(env(safe-area-inset-bottom) + 24px));
+        font-size: 0.92rem; padding: 0.7rem 1.1rem;
       }
       .ai-panel { height: 100dvh; border-radius: 0; }
       .ai-overlay { align-items: stretch; }
@@ -279,6 +293,17 @@
   const styleEl = document.createElement('style');
   styleEl.textContent = css;
   document.head.appendChild(styleEl);
+
+  // Reserve bottom space on the page so the FAB never overlaps the last bit of content
+  // (the footer-nav at the bottom of long subject guides, etc.)
+  const spacerStyle = document.createElement('style');
+  spacerStyle.textContent = `
+    body { padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
+    @media (max-width: 480px) {
+      body { padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important; }
+    }
+  `;
+  document.head.appendChild(spacerStyle);
 
   // ---------- DOM ----------
   const fab = document.createElement('button');
