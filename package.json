@@ -1,0 +1,13 @@
+{
+  "name": "sem4-study-guides",
+  "version": "1.0.0",
+  "description": "BCA(DS) Semester-4 final exam study guides with embedded AI study buddy.",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

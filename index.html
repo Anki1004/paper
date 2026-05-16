@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SEM4 · BCA(DS) IV Final University Exam · Study Guides</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .hero-deco { display:block; margin: 0.5rem 0 1rem; max-width: 240px; width: 60%; height:auto; }
+  .subj-card {
+    background: var(--paper-card, #fffaf0);
+    border: 1px solid var(--border, #d4c89a);
+    border-radius: 14px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 2px rgba(26,31,46,0.05), 0 8px 24px rgba(26,31,46,0.06);
+    display:flex;
+    flex-direction:column;
+    gap:.55rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .subj-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: var(--oxblood, #7a1a1a);
+  }
+  .subj-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(26,31,46,0.06), 0 14px 32px rgba(26,31,46,0.08);
+    border-color: var(--oxblood, #7a1a1a);
+  }
+  .subj-card a.subj-link-cover {
+    position: absolute; inset: 0; z-index: 1; text-indent: -9999px; overflow: hidden;
+  }
+  .subj-card > * { position: relative; z-index: 2; pointer-events: none; }
+  .subj-card .subj-cta { pointer-events: auto; }
+  .subj-head { display:flex; align-items:baseline; gap:.5rem; flex-wrap:wrap; margin-left: 0.5rem; }
+  .subj-code {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--oxblood, #7a1a1a);
+    background: var(--accent-bg-ox, #f7e8e3);
+    padding: 2px 8px; border-radius: 999px;
+  }
+  .subj-meta { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3, #7a8090); }
+  .subj-title {
+    font-family: "Fraunces", Georgia, serif; font-weight: 600;
+    font-size: clamp(1.25rem, 4.5vw, 1.55rem);
+    margin: 0; color: var(--ink, #1a1f2e);
+    line-height: 1.15;
+    margin-left: 0.5rem;
+  }
+  .subj-desc { margin: 0 0 0 0.5rem; color: var(--ink-2, #4a5060); font-size: .95rem; line-height: 1.5; }
+  .badges-row { display:flex; gap:.4rem; flex-wrap:wrap; margin: 0.25rem 0 0.25rem 0.5rem; }
+  .badge {
+    display:inline-block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 999px;
+    font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600;
+  }
+  .badge.units { background: var(--accent-bg-nv, #e7eef8); color: var(--navy, #1f4e8c); }
+  .badge.marks { background: var(--accent-bg-go, #fbf2da); color: var(--gold, #b8860b); }
+  .badge.pages { background: var(--accent-bg-fo, #e6f1ea); color: var(--forest, #1a5a3a); }
+  .subj-cta {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    margin: 0.5rem 0 0 0.5rem;
+    padding: 0.5rem 0.875rem;
+    background: var(--ink, #1a1f2e); color: var(--paper-card, #fffaf0);
+    border-radius: 999px;
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-weight: 600; font-size: 0.875rem;
+    text-decoration: none;
+    border: none;
+    align-self: flex-start;
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+  .subj-card:hover .subj-cta { background: var(--oxblood, #7a1a1a); }
+
+  .cram-grid { display:grid; grid-template-columns: 1fr; gap: 1.25rem; }
+  @media (min-width: 640px) { .cram-grid { grid-template-columns: 1fr 1fr; gap: 1.5rem; } }
+  @media (min-width: 1100px) { .cram-grid { grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; } }
+
+  .toc-link { color: var(--ink, #1a1f2e); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color .15s ease; }
+  .toc-link:hover { border-bottom-color: var(--navy, #1f4e8c); }
+
+  .howto {
+    background: var(--accent-bg-nv, #e7eef8);
+    border: 1px solid var(--border-soft, #e8dfc4);
+    border-radius: 14px;
+    padding: 1.25rem;
+    margin: 1.5rem 0;
+  }
+  .howto h2 { font-family: "Fraunces", Georgia, serif; font-weight: 600; margin: 0 0 .5rem; font-size: 1.25rem; color: var(--navy, #1f4e8c); }
+  .howto ol { margin: .25rem 0 0 1.2rem; padding: 0; }
+  .howto li { margin: .35rem 0; font-size: .94rem; line-height: 1.5; }
+  .flow { font-family: "JetBrains Mono", monospace; font-size: .85rem; color: var(--ink-2, #4a5060); margin-bottom: 0.75rem; }
+
+  .exam-banner {
+    background: linear-gradient(135deg, var(--accent-bg-ox, #f7e8e3) 0%, var(--paper-card, #fffaf0) 100%);
+    border: 1px solid var(--oxblood, #7a1a1a);
+    border-radius: 14px;
+    padding: 1.25rem;
+    margin: 1.5rem 0;
+  }
+  .exam-banner strong { color: var(--oxblood, #7a1a1a); font-family: "Fraunces", Georgia, serif; font-size: 1.05rem; }
+  .exam-banner ul { margin: 0.5rem 0 0 1.2rem; padding: 0; }
+  .exam-banner li { font-size: 0.92rem; line-height: 1.55; }
+
+  .footer-index { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px dashed var(--border, #d4c89a); color: var(--ink-2, #4a5060); font-size: .88rem; }
+  .footer-index details { margin-top: .75rem; }
+  .footer-index summary { cursor: pointer; font-family: "Fraunces", Georgia, serif; font-weight: 600; color: var(--ink, #1a1f2e); font-size: 0.95rem; padding: 0.5rem 0; }
+  .footer-grid { display:grid; grid-template-columns: 1fr; gap: 1rem; margin-top: .75rem; }
+  @media (min-width: 640px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 960px) { .footer-grid { grid-template-columns: 1fr 1fr 1fr; } }
+  .footer-grid h4 { font-family: "Fraunces", Georgia, serif; margin: 0 0 .35rem; font-size: .95rem; color: var(--oxblood, #7a1a1a); }
+  .footer-grid ul { list-style: none; padding: 0; margin: 0; }
+  .footer-grid li { font-size: .85rem; padding: 2px 0; }
+</style>
+</head>
+<body class="page-bg">
+<div class="container">
+
+  <header class="hero">
+    <svg class="hero-deco" viewBox="0 0 240 80" role="img" aria-label="Parchment geometric ornament">
+      <defs>
+        <pattern id="dots" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+          <circle cx="2" cy="2" r="1" fill="#d4c89a"/>
+        </pattern>
+      </defs>
+      <rect x="0" y="0" width="240" height="80" fill="url(#dots)" opacity="0.55"/>
+      <line x1="0" y1="40" x2="240" y2="40" stroke="#7a1a1a" stroke-width="1.5"/>
+      <circle cx="40" cy="40" r="10" fill="#fffaf0" stroke="#1f4e8c" stroke-width="2"/>
+      <rect x="90" y="30" width="20" height="20" rx="4" fill="#fffaf0" stroke="#1a5a3a" stroke-width="2"/>
+      <polygon points="160,30 170,50 150,50" fill="#fffaf0" stroke="#b8860b" stroke-width="2"/>
+      <circle cx="210" cy="40" r="10" fill="#fffaf0" stroke="#7a1a1a" stroke-width="2"/>
+    </svg>
+    <div class="hero-meta">
+      <span>BCA(DS)</span> • <span>IV SEM</span> • <span class="badge units">FINAL UNIVERSITY EXAM</span>
+    </div>
+    <h1>SEM4 · Final Semester Study Guides</h1>
+    <p class="section-lead">7 subjects · one page each · pattern-informed · entire-syllabus depth · mobile-first.</p>
+  </header>
+
+  <!-- EXAM BANNER -->
+  <aside class="exam-banner">
+    <strong>📜 Final University Exam — what to expect</strong>
+    <ul>
+      <li><strong>Paper format:</strong> Part I (Q1 compulsory, 10 short parts = 15M) + Part II (6 long questions × 15M, attempt 4 = 60M) → <strong>75M Theory + 25M Sessional = 100M total</strong>.</li>
+      <li><strong>Duration:</strong> 3 hours · 1.5 questions per unit set by examiner in Part II.</li>
+      <li><strong>Strategy:</strong> entire syllabus mastery — no skipping low-probability topics. Pattern data informs depth, never coverage.</li>
+      <li><strong>IKS:</strong> 75M theory split as Part I (10 compulsory) + Part II (4 of 6).</li>
+    </ul>
+  </aside>
+
+  <!-- HOW TO USE -->
+  <aside class="howto">
+    <h2>How to use this set</h2>
+    <p class="flow">📊 Pattern → 📘 Units (§A → §B → §C) → ⚡ Cram → 📋 PYQ</p>
+    <ol>
+      <li><strong>One subject = one page.</strong> Tap a card to open a self-contained mega-page with sticky tab nav (Pattern · U1 · U2 · … · Cram · PYQ).</li>
+      <li><strong>📊 Pattern</strong> first — top-10 topics, mini heatmap, unit-weight pie, predicted final paper outline.</li>
+      <li><strong>§A Expected Questions</strong> — ranked predictions, marks-weighted.</li>
+      <li><strong>§B Detailed Solutions</strong> — Karpathy style: intuition → concept → diagram → example → model answer.</li>
+      <li><strong>§C Cram Sheet</strong> — last-day formulas, must-draw diagrams, red flags.</li>
+      <li><strong>📋 PYQ Bank</strong> — every paper 2023–2025 verbatim · topic clusters · predicted final paper.</li>
+      <li>Mobile-first — designed for 360–414px width study sessions on the phone.</li>
+    </ol>
+  </aside>
+
+  <!-- 7 SUBJECT CARDS -->
+  <section class="cram-grid" aria-label="Subjects">
+
+    <article class="subj-card">
+      <a href="dbms.html" class="subj-link-cover" aria-label="Open DBMS study guide">DBMS</a>
+      <div class="subj-head">
+        <span class="subj-code">BCG-202-V</span>
+        <span class="subj-meta">3 credits</span>
+      </div>
+      <h3 class="subj-title">Database Management System</h3>
+      <p class="subj-desc">Architecture · ER model · relational algebra · normalisation · SQL · transactions · query processing.</p>
+      <div class="badges-row">
+        <span class="badge units">4 units</span>
+        <span class="badge marks">75M Theory</span>
+        <span class="badge pages">Pattern · Cram · PYQ</span>
+      </div>
+      <a href="dbms.html" class="subj-cta">Open guide →</a>
+    </article>
+
+    <article class="subj-card">
+      <a href="wc.html" class="subj-link-cover" aria-label="Open Wireless Communication study guide">WC</a>
+      <div class="subj-head">
+        <span class="subj-code">BCG-216-V</span>
+        <span class="subj-meta">4 credits</span>
+      </div>
+      <h3 class="subj-title">Wireless Communication</h3>
+      <p class="subj-desc">Cellular systems · frequency reuse · GSM/CDMA · FDMA/TDMA · handoff · ISDN · AIN networking.</p>
+      <div class="badges-row">
+        <span class="badge units">4 units</span>
+        <span class="badge marks">75M Theory</span>
+        <span class="badge pages">Pattern · Cram · PYQ</span>
+      </div>
+      <a href="wc.html" class="subj-cta">Open guide →</a>
+    </article>
+
+    <article class="subj-card">
+      <a href="loc.html" class="subj-link-cover" aria-label="Open LOC study guide">LOC</a>
+      <div class="subj-head">
+        <span class="subj-code">BCG-208-V</span>
+        <span class="subj-meta">4 credits</span>
+      </div>
+      <h3 class="subj-title">Logical Organisation of Computer</h3>
+      <p class="subj-desc">Von Neumann · IEEE 754 · Booth multiplier · CU design · DMA · pipelining · cache mapping · Flynn's.</p>
+      <div class="badges-row">
+        <span class="badge units">4 units</span>
+        <span class="badge marks">75M Theory</span>
+        <span class="badge pages">Pattern · Cram · PYQ</span>
+      </div>
+      <a href="loc.html" class="subj-cta">Open guide →</a>
+    </article>
+
+    <article class="subj-card">
+      <a href="dsur.html" class="subj-link-cover" aria-label="Open Data Science Using R study guide">DSUR</a>
+      <div class="subj-head">
+        <span class="subj-code">BCD-204-V</span>
+        <span class="subj-meta">3 credits</span>
+      </div>
+      <h3 class="subj-title">Data Science Using R</h3>
+      <p class="subj-desc">Data science intro · R data structures · apply family · S3/S4 OOP · ggplot2 · hypothesis testing · distributions.</p>
+      <div class="badges-row">
+        <span class="badge units">4 units</span>
+        <span class="badge marks">75M Theory</span>
+        <span class="badge pages">Pattern · Cram · PYQ</span>
+      </div>
+      <a href="dsur.html" class="subj-cta">Open guide →</a>
+    </article>
+
+    <article class="subj-card">
+      <a href="ctrc.html" class="subj-link-cover" aria-label="Open Critical Thinking study guide">CTRC</a>
+      <div class="subj-head">
+        <span class="subj-code">AEC-109-V</span>
+        <span class="subj-meta">2 credits · AEC</span>
+      </div>
+      <h3 class="subj-title">Critical Thinking &amp; Rhetorical Communication</h3>
+      <p class="subj-desc">Inductive/deductive reasoning · Six Thinking Hats · CRAAP test · STAR interviews · Thomas-Kilmann conflict · GD.</p>
+      <div class="badges-row">
+        <span class="badge units">4 units</span>
+        <span class="badge marks">75M Theory</span>
+        <span class="badge pages">Pattern · Cram · PYQ</span>
+      </div>
+      <a href="ctrc.html" class="subj-cta">Open guide →</a>
+    </article>
+
+    <article class="subj-card">
+      <a href="probstats.html" class="subj-link-cover" aria-label="Open Probability and Statistics study guide">ProbStats</a>
+      <div class="subj-head">
+        <span class="subj-code">BCD-202-V</span>
+        <span class="subj-meta">3 credits · numerical-heavy</span>
+      </div>
+      <h3 class="subj-title">Probability &amp; Statistics</h3>
+      <p class="subj-desc">Distributions (Normal · Binomial · Poisson · Exponential) · MGF · joint/marginal/conditional · central tendency · Pearson r · least-squares fitting.</p>
+      <div class="badges-row">
+        <span class="badge units">4 units</span>
+        <span class="badge marks">75M Theory</span>
+        <span class="badge pages">Pattern · Cram · PYQ</span>
+      </div>
+      <a href="probstats.html" class="subj-cta">Open guide →</a>
+    </article>
+
+    <article class="subj-card">
+      <a href="iks.html" class="subj-link-cover" aria-label="Open Indian Knowledge System study guide">IKS</a>
+      <div class="subj-head">
+        <span class="subj-code">VAC-104-V</span>
+        <span class="subj-meta">2 credits · VAC</span>
+      </div>
+      <h3 class="subj-title">Indian Knowledge System</h3>
+      <p class="subj-desc">6 Darshanas · Ashtanga Yoga · 9 Rasas · Vedic mathematics · Tridosha (Ayurveda) · Vastu mandala · Saptanga (Arthasastra).</p>
+      <div class="badges-row">
+        <span class="badge units">6 units</span>
+        <span class="badge marks">75M Theory</span>
+        <span class="badge pages">Pattern embedded per unit</span>
+      </div>
+      <a href="iks.html" class="subj-cta">Open guide →</a>
+    </article>
+
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer-index">
+    <div>Last built: 2026-05-11 · 7 subject mega-pages · mobile-first editorial set · BCA(DS) IV-Sem Final University Exam.</div>
+    <!-- removed: subject subfolder backup-link grid (subfolders consolidated into mega-pages) -->
+    <!--
+    <details>
+      <summary>📂 Also available — 42 individual unit sub-pages (granular study)</summary>
+      <div class="footer-grid">
+
+        <div>
+          <h4>DBMS · BCG-202-V</h4>
+          <ul>
+            <li><a class="toc-link" href="dbms/unit1.html">U1 · Basic Concepts &amp; Architecture</a></li>
+            <li><a class="toc-link" href="dbms/unit2.html">U2 · ER Model</a></li>
+            <li><a class="toc-link" href="dbms/unit3.html">U3 · Relational Algebra &amp; Calculus</a></li>
+            <li><a class="toc-link" href="dbms/unit4.html">U4 · RDB Design (Norm, SQL, Tx)</a></li>
+            <li><a class="toc-link" href="dbms/cram.html">Cram</a></li>
+            <li><a class="toc-link" href="dbms/pyq.html">PYQ</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>WC · BCG-216-V</h4>
+          <ul>
+            <li><a class="toc-link" href="wc/unit1.html">U1 · Intro to Wireless Comm</a></li>
+            <li><a class="toc-link" href="wc/unit2.html">U2 · Cellular Systems</a></li>
+            <li><a class="toc-link" href="wc/unit3.html">U3 · FDMA/TDMA/CDMA</a></li>
+            <li><a class="toc-link" href="wc/unit4.html">U4 · ISDN, AIN</a></li>
+            <li><a class="toc-link" href="wc/cram.html">Cram</a></li>
+            <li><a class="toc-link" href="wc/pyq.html">PYQ</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>LOC · BCG-208-V</h4>
+          <ul>
+            <li><a class="toc-link" href="loc/unit1.html">U1 · Functional Blocks · Arithmetic</a></li>
+            <li><a class="toc-link" href="loc/unit2.html">U2 · x86 · CU · Memory · I/O</a></li>
+            <li><a class="toc-link" href="loc/unit3.html">U3 · Pipelining &amp; Parallel</a></li>
+            <li><a class="toc-link" href="loc/unit4.html">U4 · Memory Organization (Cache)</a></li>
+            <li><a class="toc-link" href="loc/cram.html">Cram</a></li>
+            <li><a class="toc-link" href="loc/pyq.html">PYQ</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>DSUR · BCD-204-V</h4>
+          <ul>
+            <li><a class="toc-link" href="dsur/unit1.html">U1 · Intro to Data Science</a></li>
+            <li><a class="toc-link" href="dsur/unit2.html">U2 · Introduction to R</a></li>
+            <li><a class="toc-link" href="dsur/unit3.html">U3 · Programming using R (OOP)</a></li>
+            <li><a class="toc-link" href="dsur/unit4.html">U4 · Data Handling &amp; Stats</a></li>
+            <li><a class="toc-link" href="dsur/cram.html">Cram</a></li>
+            <li><a class="toc-link" href="dsur/pyq.html">PYQ</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>CTRC · AEC-109-V</h4>
+          <ul>
+            <li><a class="toc-link" href="ctrc/unit1.html">U1 · Intro to Critical Thinking</a></li>
+            <li><a class="toc-link" href="ctrc/unit2.html">U2 · Content Analysis</a></li>
+            <li><a class="toc-link" href="ctrc/unit3.html">U3 · Interview (STAR)</a></li>
+            <li><a class="toc-link" href="ctrc/unit4.html">U4 · Conflict Resolution &amp; GD</a></li>
+            <li><a class="toc-link" href="ctrc/cram.html">Cram</a></li>
+            <li><a class="toc-link" href="ctrc/pyq.html">PYQ</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>ProbStats · BCD-202-V</h4>
+          <ul>
+            <li><a class="toc-link" href="probstats/unit1.html">U1 · Random Variables</a></li>
+            <li><a class="toc-link" href="probstats/unit2.html">U2 · Moments &amp; MGF</a></li>
+            <li><a class="toc-link" href="probstats/unit3.html">U3 · Descriptive Statistics</a></li>
+            <li><a class="toc-link" href="probstats/unit4.html">U4 · Correlation &amp; Curve Fitting</a></li>
+            <li><a class="toc-link" href="probstats/cram.html">Cram</a></li>
+            <li><a class="toc-link" href="probstats/pyq.html">PYQ</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>IKS · VAC-104-V</h4>
+          <ul>
+            <li><a class="toc-link" href="iks/unit1.html">U1 · Foundations of IKS</a></li>
+            <li><a class="toc-link" href="iks/unit2.html">U2 · Psychology, Yoga, Linguistics</a></li>
+            <li><a class="toc-link" href="iks/unit3.html">U3 · Mathematics &amp; Astronomy</a></li>
+            <li><a class="toc-link" href="iks/unit4.html">U4 · Ayurveda</a></li>
+            <li><a class="toc-link" href="iks/unit5.html">U5 · Vastusastra</a></li>
+            <li><a class="toc-link" href="iks/unit6.html">U6 · Economics &amp; Governance</a></li>
+          </ul>
+        </div>
+
+      </div>
+    </details>
+    -->
+  </footer>
+
+</div>
+<script src="chat-widget.js" defer></script>
+</body>
+</html>
