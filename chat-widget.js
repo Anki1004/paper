@@ -144,6 +144,42 @@
       margin: 0.4rem 0; color: #4a5060; background: #fbf2da;
       border-radius: 0 6px 6px 0;
     }
+    .ai-msg-body .ai-table-wrap {
+      margin: 0.55rem -0.2rem; overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid #d4c89a; border-radius: 8px;
+      background: #fffaf0;
+    }
+    .ai-msg-body table {
+      width: 100%; border-collapse: collapse;
+      font-size: 0.86rem; min-width: 100%;
+    }
+    .ai-msg-body th, .ai-msg-body td {
+      padding: 0.45rem 0.6rem;
+      border-bottom: 1px solid #e8dfc2;
+      text-align: left; vertical-align: top;
+      word-break: break-word;
+    }
+    .ai-msg-body th {
+      background: #f0e9d2; color: #1a1f2e;
+      font-weight: 600; white-space: nowrap;
+      font-family: "IBM Plex Sans", system-ui, sans-serif;
+      font-size: 0.78rem; letter-spacing: 0.02em;
+      text-transform: uppercase;
+      position: sticky; top: 0;
+    }
+    .ai-msg-body tr:last-child td { border-bottom: none; }
+    .ai-msg-body tr:nth-child(even) td { background: rgba(240,233,210,0.35); }
+    .ai-tldr {
+      background: #fbf2da; border-left: 3px solid #7a1a1a;
+      padding: 0.5rem 0.7rem; border-radius: 0 6px 6px 0;
+      margin: 0 0 0.55rem; font-size: 0.92rem;
+    }
+    .ai-remember {
+      background: #f0f5ec; border-left: 3px solid #1a5a3a;
+      padding: 0.5rem 0.7rem; border-radius: 0 6px 6px 0;
+      margin: 0.55rem 0 0; font-size: 0.92rem;
+    }
 
     .ai-suggestions {
       display: flex; flex-wrap: wrap; gap: 0.4rem;
@@ -211,6 +247,22 @@
 
     @media (max-width: 480px) {
       .ai-fab { right: 12px; bottom: 12px; font-size: 0.85rem; padding: 0.6rem 0.9rem; }
+      .ai-panel { height: 100dvh; border-radius: 0; }
+      .ai-overlay { align-items: stretch; }
+      .ai-header { padding: 0.7rem 0.85rem; }
+      .ai-title { font-size: 0.98rem; }
+      .ai-messages { padding: 0.75rem 0.85rem 0.4rem; gap: 0.7rem; }
+      .ai-msg-body { font-size: 0.92rem; padding: 0.6rem 0.75rem; }
+      .ai-msg.user .ai-msg-body { max-width: 92%; }
+      .ai-msg-body h1 { font-size: 1.02rem; }
+      .ai-msg-body h2 { font-size: 0.96rem; }
+      .ai-msg-body h3 { font-size: 0.9rem; }
+      .ai-msg-body table { font-size: 0.8rem; }
+      .ai-msg-body th, .ai-msg-body td { padding: 0.4rem 0.5rem; }
+      .ai-suggestions { padding: 0.35rem 0.85rem 0.5rem; }
+      .ai-suggestion { font-size: 0.78rem; padding: 0.32rem 0.6rem; }
+      .ai-input-wrap { padding: 0.55rem 0.7rem 0.7rem; padding-bottom: max(0.7rem, env(safe-area-inset-bottom)); }
+      .ai-input { font-size: 16px; } /* prevents iOS zoom on focus */
     }
   `;
 
@@ -296,22 +348,43 @@
   function escapeHtml(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
+  function renderInline(s) {
+    s = s.replace(/`([^`\n]+)`/g, (_, c) => `<code>${escapeHtml(c)}</code>`);
+    s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    return s;
+  }
   function renderMarkdown(text) {
     if (!text) return '';
     let s = text;
-    // Code fences
-    s = s.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) =>
-      `<pre><code>${escapeHtml(code)}</code></pre>`);
-    // Inline code
-    s = s.replace(/`([^`\n]+)`/g, (_, c) => `<code>${escapeHtml(c)}</code>`);
+    // Code fences (extract first so their contents are untouched by other rules)
+    const codeBlocks = [];
+    s = s.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+      codeBlocks.push(`<pre><code>${escapeHtml(code)}</code></pre>`);
+      return ` CODEBLOCK${codeBlocks.length - 1} `;
+    });
+    // Pipe tables: header row | --- | --- | then data rows
+    s = s.replace(
+      /(?:^|\n)(\|[^\n]+\|)\n(\|[\s:|-]+\|)\n((?:\|[^\n]+\|\n?)+)/g,
+      (_, header, _sep, rows) => {
+        const splitRow = (r) => r.replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+        const ths = splitRow(header).map(c => `<th>${renderInline(escapeHtml(c))}</th>`).join('');
+        const trs = rows.trim().split('\n').map(r => {
+          const tds = splitRow(r).map(c => `<td>${renderInline(escapeHtml(c))}</td>`).join('');
+          return `<tr>${tds}</tr>`;
+        }).join('');
+        return `\n<div class="ai-table-wrap"><table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>\n`;
+      }
+    );
     // Headings
     s = s.replace(/^### (.+)$/gm, '<h3>$1</h3>');
     s = s.replace(/^## (.+)$/gm, '<h2>$1</h2>');
     s = s.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-    // Bold / italic
+    // Inline formatting on the rest
+    s = s.replace(/`([^`\n]+)`/g, (_, c) => `<code>${escapeHtml(c)}</code>`);
     s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
-    // Links
     s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
     // Lists
     s = s.replace(/(?:^|\n)((?:[-*] .+(?:\n|$))+)/g, (m, block) => {
@@ -326,9 +399,20 @@
     s = s.split(/\n{2,}/).map(block => {
       const trimmed = block.trim();
       if (!trimmed) return '';
-      if (/^<(h\d|ul|ol|pre|blockquote)/.test(trimmed)) return trimmed;
+      if (/^<(h\d|ul|ol|pre|blockquote|div|table)/.test(trimmed)) return trimmed;
+      if (/^ CODEBLOCK\d+ $/.test(trimmed)) return trimmed;
+      // TL;DR callout — paragraph that starts with "**TL;DR" (already converted to <strong>)
+      if (/^<strong>TL;DR[^<]*<\/strong>/i.test(trimmed)) {
+        return `<div class="ai-tldr">${trimmed.replace(/\n/g, '<br>')}</div>`;
+      }
+      // Remember callout
+      if (/^<strong>Remember[^<]*<\/strong>/i.test(trimmed)) {
+        return `<div class="ai-remember">${trimmed.replace(/\n/g, '<br>')}</div>`;
+      }
       return `<p>${trimmed.replace(/\n/g, '<br>')}</p>`;
     }).join('\n');
+    // Restore code blocks
+    s = s.replace(/ CODEBLOCK(\d+) /g, (_, i) => codeBlocks[+i] || '');
     return s;
   }
 
