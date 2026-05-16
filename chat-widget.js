@@ -355,21 +355,21 @@
   // ---------- Page context (subject detection + content extraction) ----------
   const SUBJECT_MAP = {
     'dbms':       { name: 'DBMS (Database Management System)',
-                    suggestions: ['Explain normalisation 1NF→3NF', 'ACID properties with example', 'Difference between Wait-Die & Wound-Wait', 'Predict the 2026 PYQ topics'] },
+                    suggestions: ['Explain 3-schema architecture (8 marks)', 'Normalization 1NF→BCNF with example (15 marks)', 'ACID properties (5 marks)', '2025 PYQ on serializability (10 marks)'] },
     'wc':         { name: 'WC (Wireless Communication)',
-                    suggestions: ['FDMA vs TDMA vs CDMA', 'How does handoff work?', 'Frequency reuse with N=7', 'Solve the 2025 PYQ on cell splitting'] },
+                    suggestions: ['FDMA vs TDMA vs CDMA (8 marks)', 'Cellular system & frequency reuse (15 marks)', 'Handoff types with diagram (10 marks)', 'GSM architecture (8 marks)'] },
     'loc':        { name: 'LOC (Logical Organisation of Computer)',
-                    suggestions: ["Booth's algorithm with example", 'IEEE 754 single-precision', 'Cache mapping types', 'Pipelining hazards table'] },
+                    suggestions: ["Booth's algorithm with example (10 marks)", 'IEEE 754 representation (8 marks)', 'Cache mapping techniques (15 marks)', 'Pipelining & hazards (10 marks)'] },
     'dsur':       { name: 'DSUR (Data Science Using R)',
-                    suggestions: ['apply vs sapply vs lapply', 't-test vs z-test in R', 'S3 vs S4 OOP', 'Explain ggplot2 layers'] },
+                    suggestions: ['apply family functions (8 marks)', 'S3 vs S4 OOP (10 marks)', 'Hypothesis testing in R (15 marks)', 'ggplot2 grammar of graphics (8 marks)'] },
     'ctrc':       { name: 'CTRC (Critical Thinking & Rhetorical Communication)',
-                    suggestions: ['Six Thinking Hats summary', 'CRAAP test explained', 'STAR for behavioural Qs', 'Thomas-Kilmann conflict modes'] },
+                    suggestions: ['Six Thinking Hats (10 marks)', 'CRAAP test for sources (8 marks)', 'STAR method with example (8 marks)', 'Thomas-Kilmann conflict modes (10 marks)'] },
     'probstats':  { name: 'Probability & Statistics',
-                    suggestions: ['Normal vs Binomial vs Poisson', 'When to use Pearson r?', 'Least-squares derivation', 'Solve a PYQ on MGF'] },
+                    suggestions: ['Normal vs Binomial vs Poisson (15 marks)', 'MGF — derivation & uses (10 marks)', 'Least-squares regression (10 marks)', 'Pearson correlation (8 marks)'] },
     'iks':        { name: 'IKS (Indian Knowledge System)',
-                    suggestions: ['6 Darshanas in one table', 'Ashtanga Yoga steps', '9 Rasas with examples', 'Saptanga theory of state'] },
+                    suggestions: ['6 Darshanas — comparative table (15 marks)', 'Ashtanga Yoga of Patanjali (10 marks)', '9 Rasas with examples (8 marks)', 'Saptanga theory of state (10 marks)'] },
     'index':      { name: 'SEM4 study guide index',
-                    suggestions: ['What should I study first?', 'Which subject is highest weightage?', 'Make me a 7-day plan', 'Hardest topic in DBMS?'] }
+                    suggestions: ['What should I study first?', 'Which subject is highest weightage?', 'Make me a 7-day plan', 'Hardest topic across all subjects?'] }
   };
 
   function detectSubject() {
