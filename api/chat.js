@@ -75,6 +75,21 @@ export default async function handler(req) {
   const messages = Array.isArray(body?.messages) ? body.messages : null;
   if (!messages || messages.length === 0) return jsonError('messages array required', 400);
 
+  // Optional page context — current subject + extracted text from the guide the user is viewing.
+  const subject     = typeof body?.subject === 'string' ? body.subject.slice(0, 200) : '';
+  const pageTitle   = typeof body?.pageTitle === 'string' ? body.pageTitle.slice(0, 300) : '';
+  const pageContext = typeof body?.pageContext === 'string' ? body.pageContext.slice(0, 30000) : '';
+
+  let systemPrompt = SYSTEM_PROMPT;
+  if (subject || pageContext) {
+    systemPrompt += `\n\n---\n# Current page the user is viewing\n`;
+    if (subject)   systemPrompt += `Subject: ${subject}\n`;
+    if (pageTitle) systemPrompt += `Page title: ${pageTitle}\n`;
+    if (pageContext) {
+      systemPrompt += `\nThe following is the FULL text content of the guide page the user is currently on, including the PYQ bank (past-year questions, heatmap, predicted topics) if present. Treat it as the authoritative source. When the user asks about "this page", "this topic", "the PYQ", or any concept covered below, ground your answer in this content and cite the specific section/year where relevant. If the user's question is clearly outside this page, you may answer from general knowledge.\n\n<<<PAGE_CONTENT_START>>>\n${pageContext}\n<<<PAGE_CONTENT_END>>>`;
+    }
+  }
+
   const openrouterKey = process.env.OPENROUTER_API_KEY;
   const anthropicKey  = process.env.ANTHROPIC_API_KEY;
   const nvidiaKey     = process.env.NVIDIA_API_KEY;
@@ -95,20 +110,23 @@ export default async function handler(req) {
       apiKey: openrouterKey,
       model: process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-4.5',
       extraHeaders: { 'HTTP-Referer': referer, 'X-Title': 'SEM4 Study Guides' },
-      messages
+      messages,
+      systemPrompt
     });
-    if (anthropicKey) return await streamAnthropic(messages, anthropicKey);
+    if (anthropicKey) return await streamAnthropic(messages, anthropicKey, systemPrompt);
     if (nvidiaKey) return await streamOpenAICompatible({
       url: 'https://integrate.api.nvidia.com/v1/chat/completions',
       apiKey: nvidiaKey,
       model: process.env.NVIDIA_MODEL || 'meta/llama-3.1-70b-instruct',
-      messages
+      messages,
+      systemPrompt
     });
     return await streamOpenAICompatible({
       url: 'https://api.openai.com/v1/chat/completions',
       apiKey: openaiKey,
       model: 'gpt-4o-mini',
-      messages
+      messages,
+      systemPrompt
     });
   } catch (err) {
     return jsonError(String(err?.message || err), 500);
@@ -116,7 +134,7 @@ export default async function handler(req) {
 }
 
 // ---------- Anthropic native (messages API) ----------
-async function streamAnthropic(messages, apiKey) {
+async function streamAnthropic(messages, apiKey, systemPrompt) {
   const cleanMessages = messages
     .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
     .map(m => ({ role: m.role, content: m.content }));
@@ -131,7 +149,7 @@ async function streamAnthropic(messages, apiKey) {
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 2048,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt || SYSTEM_PROMPT,
       stream: true,
       messages: cleanMessages
     })
@@ -186,9 +204,9 @@ async function streamAnthropic(messages, apiKey) {
 }
 
 // ---------- OpenAI-compatible (OpenAI, OpenRouter, NVIDIA NIM) ----------
-async function streamOpenAICompatible({ url, apiKey, model, messages, extraHeaders }) {
+async function streamOpenAICompatible({ url, apiKey, model, messages, extraHeaders, systemPrompt }) {
   const cleanMessages = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: systemPrompt || SYSTEM_PROMPT },
     ...messages
       .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
       .map(m => ({ role: m.role, content: m.content }))

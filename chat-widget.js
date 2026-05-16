@@ -10,18 +10,24 @@
   // ---------- Styles ----------
   const css = `
     .ai-fab {
-      position: fixed; right: 18px; bottom: 18px; z-index: 9998;
+      position: fixed;
+      right: max(16px, env(safe-area-inset-right));
+      bottom: max(18px, calc(env(safe-area-inset-bottom) + 14px));
+      z-index: 2147483646;
       display: inline-flex; align-items: center; gap: 0.5rem;
-      padding: 0.7rem 1.05rem;
+      padding: 0.75rem 1.1rem;
       background: #1a1f2e; color: #fffaf0;
       border: 1px solid #7a1a1a;
       border-radius: 999px;
       font-family: "IBM Plex Sans", system-ui, sans-serif;
-      font-weight: 600; font-size: 0.92rem;
+      font-weight: 600; font-size: 0.95rem;
       letter-spacing: 0.02em;
       cursor: pointer; user-select: none;
-      box-shadow: 0 6px 20px rgba(26,31,46,0.28), 0 2px 4px rgba(26,31,46,0.18);
+      box-shadow: 0 6px 20px rgba(26,31,46,0.32), 0 2px 4px rgba(26,31,46,0.22);
       transition: transform 0.15s ease, background 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+      transform: translateZ(0);
+      will-change: transform;
     }
     .ai-fab:hover { transform: translateY(-2px); background: #7a1a1a; }
     .ai-fab .ai-fab-dot {
@@ -246,7 +252,11 @@
     }
 
     @media (max-width: 480px) {
-      .ai-fab { right: 12px; bottom: 12px; font-size: 0.85rem; padding: 0.6rem 0.9rem; }
+      .ai-fab {
+        right: max(12px, env(safe-area-inset-right));
+        bottom: max(16px, calc(env(safe-area-inset-bottom) + 12px));
+        font-size: 0.9rem; padding: 0.65rem 1rem;
+      }
       .ai-panel { height: 100dvh; border-radius: 0; }
       .ai-overlay { align-items: stretch; }
       .ai-header { padding: 0.7rem 0.85rem; }
@@ -300,12 +310,7 @@
         </div>
       </div>
       <div class="ai-messages" aria-live="polite"></div>
-      <div class="ai-suggestions">
-        <button class="ai-suggestion">Explain normalisation 1NF→3NF</button>
-        <button class="ai-suggestion">Difference between FDMA & CDMA?</button>
-        <button class="ai-suggestion">Booth's algorithm with example</button>
-        <button class="ai-suggestion">When to use t-test vs z-test?</button>
-      </div>
+      <div class="ai-suggestions"></div>
       <div class="ai-input-wrap">
         <div class="ai-input-row">
           <textarea class="ai-input" rows="1" placeholder="Ask anything — from these subjects or beyond…"></textarea>
@@ -327,6 +332,63 @@
   const closeBtn = overlay.querySelector('.ai-close');
   const clearBtn = overlay.querySelector('.ai-clear');
   const suggestionsEl = overlay.querySelector('.ai-suggestions');
+  const titleSubEl = overlay.querySelector('.ai-title-sub');
+
+  // Show current subject in the header pill + render per-subject suggestions
+  if (subjectInfo && titleSubEl) titleSubEl.textContent = subjectInfo.name.split(' ')[0];
+  if (subjectInfo) {
+    suggestionsEl.innerHTML = subjectInfo.suggestions
+      .map(q => `<button class="ai-suggestion">${q}</button>`).join('');
+  }
+  input.placeholder = subjectInfo
+    ? `Ask about ${subjectInfo.name.split(' (')[0]} — concepts, PYQs, anything…`
+    : 'Ask anything — from these subjects or beyond…';
+
+  // ---------- Page context (subject detection + content extraction) ----------
+  const SUBJECT_MAP = {
+    'dbms':       { name: 'DBMS (Database Management System)',
+                    suggestions: ['Explain normalisation 1NF→3NF', 'ACID properties with example', 'Difference between Wait-Die & Wound-Wait', 'Predict the 2026 PYQ topics'] },
+    'wc':         { name: 'WC (Wireless Communication)',
+                    suggestions: ['FDMA vs TDMA vs CDMA', 'How does handoff work?', 'Frequency reuse with N=7', 'Solve the 2025 PYQ on cell splitting'] },
+    'loc':        { name: 'LOC (Logical Organisation of Computer)',
+                    suggestions: ["Booth's algorithm with example", 'IEEE 754 single-precision', 'Cache mapping types', 'Pipelining hazards table'] },
+    'dsur':       { name: 'DSUR (Data Science Using R)',
+                    suggestions: ['apply vs sapply vs lapply', 't-test vs z-test in R', 'S3 vs S4 OOP', 'Explain ggplot2 layers'] },
+    'ctrc':       { name: 'CTRC (Critical Thinking & Rhetorical Communication)',
+                    suggestions: ['Six Thinking Hats summary', 'CRAAP test explained', 'STAR for behavioural Qs', 'Thomas-Kilmann conflict modes'] },
+    'probstats':  { name: 'Probability & Statistics',
+                    suggestions: ['Normal vs Binomial vs Poisson', 'When to use Pearson r?', 'Least-squares derivation', 'Solve a PYQ on MGF'] },
+    'iks':        { name: 'IKS (Indian Knowledge System)',
+                    suggestions: ['6 Darshanas in one table', 'Ashtanga Yoga steps', '9 Rasas with examples', 'Saptanga theory of state'] },
+    'index':      { name: 'SEM4 study guide index',
+                    suggestions: ['What should I study first?', 'Which subject is highest weightage?', 'Make me a 7-day plan', 'Hardest topic in DBMS?'] }
+  };
+
+  function detectSubject() {
+    const path = (location.pathname || '').toLowerCase();
+    const file = path.split('/').pop().replace(/\.html?$/, '') || 'index';
+    return SUBJECT_MAP[file] ? file : 'index';
+  }
+
+  function extractPageContent(maxChars = 22000) {
+    // Prefer the main .container; fall back to body. Strip script/style/svg + the chat widget itself.
+    const root = document.querySelector('.container') || document.body;
+    if (!root) return '';
+    const clone = root.cloneNode(true);
+    clone.querySelectorAll('script, style, svg, .ai-fab, .ai-overlay').forEach(n => n.remove());
+    // Collapse whitespace
+    let text = (clone.innerText || clone.textContent || '').replace(/\s+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+    if (text.length > maxChars) {
+      // Keep the beginning (overview/units) AND the end (cram + PYQ section is usually last).
+      const head = text.slice(0, Math.floor(maxChars * 0.45));
+      const tail = text.slice(-Math.floor(maxChars * 0.55));
+      text = head + '\n\n…[middle trimmed for length]…\n\n' + tail;
+    }
+    return text;
+  }
+
+  const subjectKey = detectSubject();
+  const subjectInfo = SUBJECT_MAP[subjectKey];
 
   // ---------- State ----------
   let messages = loadHistory();
@@ -422,10 +484,13 @@
     if (messages.length === 0) {
       const intro = document.createElement('div');
       intro.className = 'ai-msg assistant';
+      const subjectLine = subjectInfo
+        ? `You're on the <strong>${subjectInfo.name}</strong> guide — I can see the full page (concepts, cram sheet, and PYQ bank). Ask me anything from it.`
+        : `Ask me anything about <strong>DBMS, WC, LOC, DSUR, CTRC, ProbStats, or IKS</strong>, or anything else on your mind.`;
       intro.innerHTML = `
         <div class="ai-msg-role">Study Buddy</div>
         <div class="ai-msg-body">
-          <p>Hey — ask me anything about <strong>DBMS, WC, LOC, DSUR, CTRC, ProbStats, or IKS</strong>, or anything else on your mind.</p>
+          <p>${subjectLine}</p>
           <p>Tap a suggestion below to start.</p>
         </div>`;
       msgsEl.appendChild(intro);
@@ -477,7 +542,12 @@
       const res = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: messages.map(m => ({ role: m.role, content: m.content })) })
+        body: JSON.stringify({
+          messages: messages.map(m => ({ role: m.role, content: m.content })),
+          subject: subjectInfo ? subjectInfo.name : '',
+          pageTitle: document.title || '',
+          pageContext: extractPageContent()
+        })
       });
 
       if (!res.ok || !res.body) {
