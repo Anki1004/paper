@@ -1,7 +1,7 @@
 // Vercel serverless function — AI chat for SEM4 study guides
 // Supports 4 providers (auto-detected in priority order):
-//   1. OPENROUTER_API_KEY  — multi-model gateway (default)
-//   2. ANTHROPIC_API_KEY   — Claude direct
+//   1. ANTHROPIC_API_KEY   — Claude direct (primary)
+//   2. OPENROUTER_API_KEY  — multi-model gateway
 //   3. NVIDIA_API_KEY      — NVIDIA NIM hosted models
 //   4. OPENAI_API_KEY      — OpenAI direct
 //
@@ -155,7 +155,7 @@ export default async function handler(req) {
 
   if (!openrouterKey && !anthropicKey && !nvidiaKey && !openaiKey) {
     return jsonError(
-      'No API key configured. Set OPENROUTER_API_KEY (recommended), ANTHROPIC_API_KEY, NVIDIA_API_KEY, or OPENAI_API_KEY in Vercel environment variables.',
+      'No API key configured. Set ANTHROPIC_API_KEY (recommended), OPENROUTER_API_KEY, NVIDIA_API_KEY, or OPENAI_API_KEY in Vercel environment variables.',
       500
     );
   }
@@ -163,6 +163,7 @@ export default async function handler(req) {
   const referer = req.headers.get('origin') || req.headers.get('referer') || 'https://sem4-guides.vercel.app';
 
   try {
+    if (anthropicKey) return await streamAnthropic(messages, anthropicKey, systemPrompt);
     if (openrouterKey) return await streamOpenAICompatible({
       url: 'https://openrouter.ai/api/v1/chat/completions',
       apiKey: openrouterKey,
@@ -171,7 +172,6 @@ export default async function handler(req) {
       messages,
       systemPrompt
     });
-    if (anthropicKey) return await streamAnthropic(messages, anthropicKey, systemPrompt);
     if (nvidiaKey) return await streamOpenAICompatible({
       url: 'https://integrate.api.nvidia.com/v1/chat/completions',
       apiKey: nvidiaKey,

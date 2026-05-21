@@ -9,13 +9,13 @@ Static HTML study guides for BCA(DS) Semester 4 final university exam, plus a fl
 3. **Root Directory:** set to the folder that contains `index.html` and `api/`.
 4. **Build settings:** leave defaults — no build step, static files + `api/chat.js`.
 5. **Environment Variables** (Project Settings → Environment Variables) — set any **one** of:
-   - `OPENROUTER_API_KEY` — recommended; gets you Claude, GPT, Llama, etc. through one key. Get it at <https://openrouter.ai/keys>
-   - `ANTHROPIC_API_KEY` — Claude only. <https://console.anthropic.com>
+   - `ANTHROPIC_API_KEY` — Claude direct (primary). <https://console.anthropic.com>
+   - `OPENROUTER_API_KEY` — multi-model gateway (Claude, GPT, Llama, etc.). <https://openrouter.ai/keys>
    - `NVIDIA_API_KEY` — NVIDIA hosted models. <https://build.nvidia.com>
    - `OPENAI_API_KEY` — OpenAI only. <https://platform.openai.com/api-keys>
 6. **Deploy.** Visit the URL — floating **Ask AI** button bottom-right on every page.
 
-Priority order when multiple keys are set: OpenRouter → Anthropic → NVIDIA → OpenAI.
+Priority order when multiple keys are set: Anthropic → OpenRouter → NVIDIA → OpenAI.
 
 ## Local dev
 
