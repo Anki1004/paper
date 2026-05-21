@@ -162,37 +162,103 @@ export default async function handler(req) {
 
   const referer = req.headers.get('origin') || req.headers.get('referer') || 'https://sem4-guides.vercel.app';
 
-  try {
-    if (anthropicKey) return await streamAnthropic(messages, anthropicKey, systemPrompt);
-    if (openrouterKey) return await streamOpenAICompatible({
+  // Build provider chain in priority order. Each entry exposes an opener that
+  // either returns a working upstream Response or throws, plus a piper that
+  // reads the provider-specific SSE format and emits plain text deltas.
+  const providers = [];
+  if (anthropicKey) providers.push({
+    name: 'Claude (Anthropic)',
+    open: () => openAnthropic(messages, anthropicKey, systemPrompt),
+    pipe: pipeAnthropic
+  });
+  if (openrouterKey) providers.push({
+    name: 'OpenRouter',
+    open: () => openOpenAICompatible({
       url: 'https://openrouter.ai/api/v1/chat/completions',
       apiKey: openrouterKey,
       model: process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-4.5',
       extraHeaders: { 'HTTP-Referer': referer, 'X-Title': 'SEM4 Study Guides' },
       messages,
       systemPrompt
-    });
-    if (nvidiaKey) return await streamOpenAICompatible({
+    }),
+    pipe: pipeOpenAICompatible
+  });
+  if (nvidiaKey) providers.push({
+    name: 'NVIDIA NIM',
+    open: () => openOpenAICompatible({
       url: 'https://integrate.api.nvidia.com/v1/chat/completions',
       apiKey: nvidiaKey,
       model: process.env.NVIDIA_MODEL || 'meta/llama-3.1-70b-instruct',
       messages,
       systemPrompt
-    });
-    return await streamOpenAICompatible({
+    }),
+    pipe: pipeOpenAICompatible
+  });
+  if (openaiKey) providers.push({
+    name: 'OpenAI',
+    open: () => openOpenAICompatible({
       url: 'https://api.openai.com/v1/chat/completions',
       apiKey: openaiKey,
       model: 'gpt-4o-mini',
       messages,
       systemPrompt
+    }),
+    pipe: pipeOpenAICompatible
+  });
+
+  return await streamWithFallback(providers);
+}
+
+// ---------- Fallback orchestrator ----------
+// Try each provider in order. On a non-2xx / network failure during the
+// initial POST, record a visible "[X unavailable — switching to Y…]" note,
+// move on to the next provider, and prepend the collected notes to the
+// successful stream so the user can see what happened.
+async function streamWithFallback(providers) {
+  const encoder = new TextEncoder();
+  const notes = [];
+
+  for (let i = 0; i < providers.length; i++) {
+    const p = providers[i];
+    let upstream;
+    try {
+      upstream = await p.open();
+    } catch (e) {
+      const next = providers[i + 1];
+      const tail = next ? ` — switching to ${next.name}…` : '';
+      notes.push(`[${p.name} unavailable: ${String(e?.message || e).slice(0, 200)}${tail}]`);
+      continue;
+    }
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          if (notes.length) {
+            controller.enqueue(encoder.encode(notes.join('\n') + '\n\n'));
+          }
+          await p.pipe(upstream, controller, encoder);
+        } catch (e) {
+          controller.enqueue(encoder.encode(`\n\n[stream error: ${String(e?.message || e)}]`));
+        } finally {
+          controller.close();
+        }
+      }
     });
-  } catch (err) {
-    return jsonError(String(err?.message || err), 500);
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'Access-Control-Allow-Origin': '*'
+      }
+    });
   }
+
+  return jsonError(`All AI providers failed.\n${notes.join('\n')}`, 502);
 }
 
 // ---------- Anthropic native (messages API) ----------
-async function streamAnthropic(messages, apiKey, systemPrompt) {
+async function openAnthropic(messages, apiKey, systemPrompt) {
   const cleanMessages = messages
     .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
     .map(m => ({ role: m.role, content: m.content }));
@@ -215,54 +281,37 @@ async function streamAnthropic(messages, apiKey, systemPrompt) {
 
   if (!upstream.ok || !upstream.body) {
     const text = await upstream.text().catch(() => '');
-    return jsonError(`Anthropic API ${upstream.status}: ${text.slice(0, 300)}`, 502);
+    throw new Error(`HTTP ${upstream.status} ${text.slice(0, 200)}`);
   }
+  return upstream;
+}
 
-  const encoder = new TextEncoder();
+async function pipeAnthropic(upstream, controller, encoder) {
   const decoder = new TextDecoder();
   const reader = upstream.body.getReader();
-
-  const stream = new ReadableStream({
-    async start(controller) {
-      let buf = '';
+  let buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop() || '';
+    for (const line of lines) {
+      if (!line.startsWith('data:')) continue;
+      const data = line.slice(5).trim();
+      if (!data) continue;
       try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += decoder.decode(value, { stream: true });
-          const lines = buf.split('\n');
-          buf = lines.pop() || '';
-          for (const line of lines) {
-            if (!line.startsWith('data:')) continue;
-            const data = line.slice(5).trim();
-            if (!data) continue;
-            try {
-              const evt = JSON.parse(data);
-              if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
-                controller.enqueue(encoder.encode(evt.delta.text));
-              }
-            } catch { /* ignore keepalives */ }
-          }
+        const evt = JSON.parse(data);
+        if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+          controller.enqueue(encoder.encode(evt.delta.text));
         }
-      } catch (e) {
-        controller.enqueue(encoder.encode(`\n\n[stream error: ${String(e)}]`));
-      } finally {
-        controller.close();
-      }
+      } catch { /* ignore keepalives */ }
     }
-  });
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'no-cache',
-      'Access-Control-Allow-Origin': '*'
-    }
-  });
+  }
 }
 
 // ---------- OpenAI-compatible (OpenAI, OpenRouter, NVIDIA NIM) ----------
-async function streamOpenAICompatible({ url, apiKey, model, messages, extraHeaders, systemPrompt }) {
+async function openOpenAICompatible({ url, apiKey, model, messages, extraHeaders, systemPrompt }) {
   const cleanMessages = [
     { role: 'system', content: systemPrompt || SYSTEM_PROMPT },
     ...messages
@@ -270,15 +319,13 @@ async function streamOpenAICompatible({ url, apiKey, model, messages, extraHeade
       .map(m => ({ role: m.role, content: m.content }))
   ];
 
-  const headers = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${apiKey}`,
-    ...(extraHeaders || {})
-  };
-
   const upstream = await fetch(url, {
     method: 'POST',
-    headers,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+      ...(extraHeaders || {})
+    },
     body: JSON.stringify({
       model,
       stream: true,
@@ -290,47 +337,30 @@ async function streamOpenAICompatible({ url, apiKey, model, messages, extraHeade
 
   if (!upstream.ok || !upstream.body) {
     const text = await upstream.text().catch(() => '');
-    return jsonError(`Upstream API ${upstream.status}: ${text.slice(0, 400)}`, 502);
+    throw new Error(`HTTP ${upstream.status} ${text.slice(0, 200)}`);
   }
+  return upstream;
+}
 
-  const encoder = new TextEncoder();
+async function pipeOpenAICompatible(upstream, controller, encoder) {
   const decoder = new TextDecoder();
   const reader = upstream.body.getReader();
-
-  const stream = new ReadableStream({
-    async start(controller) {
-      let buf = '';
+  let buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop() || '';
+    for (const line of lines) {
+      if (!line.startsWith('data:')) continue;
+      const data = line.slice(5).trim();
+      if (!data || data === '[DONE]') continue;
       try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += decoder.decode(value, { stream: true });
-          const lines = buf.split('\n');
-          buf = lines.pop() || '';
-          for (const line of lines) {
-            if (!line.startsWith('data:')) continue;
-            const data = line.slice(5).trim();
-            if (!data || data === '[DONE]') continue;
-            try {
-              const evt = JSON.parse(data);
-              const delta = evt.choices?.[0]?.delta?.content;
-              if (delta) controller.enqueue(encoder.encode(delta));
-            } catch { /* ignore */ }
-          }
-        }
-      } catch (e) {
-        controller.enqueue(encoder.encode(`\n\n[stream error: ${String(e)}]`));
-      } finally {
-        controller.close();
-      }
+        const evt = JSON.parse(data);
+        const delta = evt.choices?.[0]?.delta?.content;
+        if (delta) controller.enqueue(encoder.encode(delta));
+      } catch { /* ignore */ }
     }
-  });
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'no-cache',
-      'Access-Control-Allow-Origin': '*'
-    }
-  });
+  }
 }
