@@ -342,16 +342,6 @@
   const suggestionsEl = overlay.querySelector('.ai-suggestions');
   const titleSubEl = overlay.querySelector('.ai-title-sub');
 
-  // Show current subject in the header pill + render per-subject suggestions
-  if (subjectInfo && titleSubEl) titleSubEl.textContent = subjectInfo.name.split(' ')[0];
-  if (subjectInfo) {
-    suggestionsEl.innerHTML = subjectInfo.suggestions
-      .map(q => `<button class="ai-suggestion">${q}</button>`).join('');
-  }
-  input.placeholder = subjectInfo
-    ? `Ask about ${subjectInfo.name.split(' (')[0]} — concepts, PYQs, anything…`
-    : 'Ask anything — from these subjects or beyond…';
-
   // ---------- Page context (subject detection + content extraction) ----------
   const SUBJECT_MAP = {
     'dbms':       { name: 'DBMS (Database Management System)',
@@ -397,6 +387,16 @@
 
   const subjectKey = detectSubject();
   const subjectInfo = SUBJECT_MAP[subjectKey];
+
+  // Show current subject in the header pill + render per-subject suggestions
+  if (subjectInfo && titleSubEl) titleSubEl.textContent = subjectInfo.name.split(' ')[0];
+  if (subjectInfo) {
+    suggestionsEl.innerHTML = subjectInfo.suggestions
+      .map(q => `<button class="ai-suggestion">${q}</button>`).join('');
+  }
+  input.placeholder = subjectInfo
+    ? `Ask about ${subjectInfo.name.split(' (')[0]} — concepts, PYQs, anything…`
+    : 'Ask anything — from these subjects or beyond…';
 
   // ---------- State ----------
   let messages = loadHistory();
